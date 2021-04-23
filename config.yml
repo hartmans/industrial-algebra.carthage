@@ -5,3 +5,4 @@ hadron_operations: /home/hartmans/hadron/hadron-operations
 container_prefix: ""
 debian:
   stage1_mirror: file:///debian
+  mirror: http://apt.algebra/debian
