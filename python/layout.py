@@ -75,6 +75,8 @@ class IaLayout(CarthageLayout):
         class apt(OurMachine):
 
             nginx_config = mako_task("apt_site.mako", output = "etc/nginx/sites-enabled/apt")
+
+            container_args = ['--bind=/debian']
             
             class cust(ContainerCustomization):
 
