@@ -1,3 +1,4 @@
+bind-dynamic
 interface=eth0
 no-resolv
 server=8.8.8.8
