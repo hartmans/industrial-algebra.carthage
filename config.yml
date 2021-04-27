@@ -1,6 +1,6 @@
 plugins:
-  - /home/hartmans/industrial-algebra.carthage
   - /home/hartmans/hadron/hadron-operations
+  - /home/hartmans/industrial-algebra.carthage
 authorized_keys: /home/hartmans/.ssh/id_hadron_rsa.pub
 hadron_operations: /home/hartmans/hadron/hadron-operations
 container_prefix: ""
