@@ -8,6 +8,7 @@ from carthage.image import *
 from carthage.machine import *
 from carthage.debian import *
 from carthage.network import V4Config
+from carthage.ansible import ansible_task
 
 class OurMachine(MachineModel, SystemdNetworkModelMixin, template = True):
 
@@ -16,7 +17,7 @@ class OurMachine(MachineModel, SystemdNetworkModelMixin, template = True):
         return self.name #manage through the host name
 
 
-class IaLayout(CarthageLayout):
+class IaLayout(CarthageLayout, AnsibleModelMixin):
 
     @provides(container_image)
     class OurImage(DebianContainerImage):
@@ -65,7 +66,7 @@ class IaLayout(CarthageLayout):
 
         @globally_unique_key("ia_network")
         class ia_net(NetworkModel):
-
+            domain = "algebra"
             bridge_name = "blaptop"
 
             v4_config = V4Config(
@@ -129,6 +130,16 @@ class IaLayout(CarthageLayout):
 
             container_args=["--bind=/home/hartmans/hadron:/hadron"]
 
+            network = injector_access('ia_network')
+            @property
+            def this_slot(self):
+                import hadron.carthage
+                slot =  hadron.carthage.fake_slot_for_model(self, netid = 1, role = "debian")
+                slot.os = "Debian"
+                slot.release = "bullseye"
+                slot.track = "snapshot"
+                return slot
+            
             class Cust(MachineCustomization):
 
                 @setup_task("make user")
@@ -141,9 +152,12 @@ class IaLayout(CarthageLayout):
                 async def install_dev_packages(self):
                     await self.ssh("apt update",
                                _bg = True, _bg_exc = False)
-                    await self.ssh('apt -y install ansible git emacs-nox python3-sqlalchemy python3-tornado python3-pyvmomi',
+                    await self.ssh('apt -y install ansible git emacs-nox python3-sqlalchemy python3-tornado python3-pyvmomi rsync',
                                _bg = True,
                                    _bg_exc = False)
                     async with self.filesystem_access() as path:
                         home_hartmans = Path(path)/"home/hartmans"
                     home_hartmans.joinpath("hadron").symlink_to("/hadron")
+
+                aces_distribution = ansible_task("ansible/playbooks/aces.yml")
+                
