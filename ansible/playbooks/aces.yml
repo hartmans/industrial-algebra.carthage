@@ -1,0 +1,5 @@
+- hosts: all
+  remote_user: root
+  tasks:
+  - include_role: name=aces-base tasks_from=distribution
+  

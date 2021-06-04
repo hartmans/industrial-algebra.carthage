@@ -19,6 +19,11 @@ class OurMachine(MachineModel, SystemdNetworkModelMixin, template = True):
 
 class IaLayout(CarthageLayout, AnsibleModelMixin):
 
+    layout_name = "industrial-algebra"
+
+    apt_dependency = MachineDependency('apt.algebra')
+    dns_dependency = MachineDependency('dns.algebra')
+    
     @provides(container_image)
     class OurImage(DebianContainerImage):
         ssh_authorization = customization_task(SshAuthorizedKeyCustomizations)
@@ -33,6 +38,8 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
         domain = "suchdamage.org"
 
         class industrial_algebra(OurMachine):
+
+            override_dependencies = True
 
             name = "industrial-algebra"
             add_provider(machine_implementation_key, dependency_quote(LocalMachine))
@@ -88,6 +95,9 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
 
         class apt(OurMachine):
 
+            disable_system_dependency(MachineDependency("apt.algebra"))
+            
+            
             nginx_config = mako_task("apt_site.mako", output = "etc/nginx/sites-enabled/apt")
 
             container_args = ['--bind=/debian']
@@ -100,6 +110,7 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
 
         class dns(OurMachine):
 
+            override_dependencies = True
 
             dnsmasq_conf_task = mako_task("dnsmasq.mako", output = "etc/dnsmasq.conf",
                                           net = InjectionKey("ia_network"))
@@ -151,13 +162,35 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
                 @setup_task("install packages")
                 async def install_dev_packages(self):
                     await self.ssh("apt update",
-                               _bg = True, _bg_exc = False)
+                                   _bg = True, _bg_exc = False)
                     await self.ssh('apt -y install ansible git emacs-nox python3-sqlalchemy python3-tornado python3-pyvmomi rsync',
-                               _bg = True,
+                                   _bg = True,
                                    _bg_exc = False)
                     async with self.filesystem_access() as path:
                         home_hartmans = Path(path)/"home/hartmans"
-                    home_hartmans.joinpath("hadron").symlink_to("/hadron")
+                        home_hartmans.joinpath("hadron").symlink_to("/hadron")
 
                 aces_distribution = ansible_task("ansible/playbooks/aces.yml")
                 
+        class test(OurMachine):
+            container_args=["--bind=/home/hartmans/hadron:/hadron", "--bind=/dev/kvm", "--bind=/dev/fuse"]
+
+            class Cust(MachineCustomization):
+
+                @setup_task("make user")
+                async def make_user(self):
+                    await self.ssh("useradd -u 8042 -m hartmans",
+                                   _bg = True,
+                                   _bg_exc = False)
+
+                @setup_task("install packages")
+                async def install_dev_packages(self):
+                    await self.ssh("apt update",
+                                   _bg = True, _bg_exc = False)
+                    await self.ssh('apt -y install ansible git emacs-nox python3-sqlalchemy python3-tornado python3-pyvmomi rsync',
+                                   _bg = True,
+                                   _bg_exc = False)
+                    async with self.filesystem_access() as path:
+                        home_hartmans = Path(path)/"home/hartmans"
+                        home_hartmans.joinpath("hadron").symlink_to("/hadron")
+
