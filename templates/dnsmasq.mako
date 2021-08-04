@@ -1,7 +1,10 @@
 bind-dynamic
 interface=eth0
 no-resolv
+server=192.168.101.1
 server=8.8.8.8
+host-record=dns.algebra,10.37.0.2
+
 %for l,h in net.v4_config.dhcp_ranges:
 dhcp-range=${str(l)},${str(h)},1h
 %endfor
