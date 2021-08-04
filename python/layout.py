@@ -1,6 +1,7 @@
 from pathlib import Path
 from carthage.dependency_injection import *
 from carthage import *
+from carthage.ansible import ansible_log
 from carthage.modeling import *
 from carthage.systemd import *
 from carthage.container import *
@@ -9,6 +10,7 @@ from carthage.machine import *
 from carthage.debian import *
 from carthage.network import V4Config
 from carthage.ansible import ansible_task
+from carthage.vm import Vm, vm_image
 
 class OurMachine(MachineModel, SystemdNetworkModelMixin, template = True):
 
@@ -28,6 +30,17 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
     class OurImage(DebianContainerImage):
         ssh_authorization = customization_task(SshAuthorizedKeyCustomizations)
 
+    @no_instantiate()
+    class BusterImage(OurImage.target):
+
+        def __init__(self, **kwargs):
+            super().__init__(name = "debian-buster",
+                             distribution = "buster",
+                             **kwargs)
+            self.config_layout = self.injector.get_instance(ConfigLayout)
+            self.config_layout.debian.distribution = "buster"
+
+    add_provider(InjectionKey(BusterImage), BusterImage)
     # We don't need an origin
     add_provider(ssh_origin, None)
 
@@ -194,3 +207,29 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
                         home_hartmans = Path(path)/"home/hartmans"
                         home_hartmans.joinpath("hadron").symlink_to("/hadron")
 
+
+        class buster(OurMachine):
+
+            @provides(vm_image)
+            @inject(ainjector = AsyncInjector, buster_container = BusterImage,
+                    )
+            async def vm_image(ainjector, buster_container):
+                return await ainjector(
+                    debian_container_to_vm,  buster_container, "debian-buster.raw",
+                    "10G",
+                    classes = "+SERIAL,CLOUD_INIT,OPENROOT")
+            network  = injector_access("ia_network")
+            
+            @property
+            def this_slot(self):
+                import hadron.carthage
+                slot =  hadron.carthage.fake_slot_for_model(self, netid = 1, role = "debian")
+                return slot
+
+            cloud_init = True
+            add_provider(machine_implementation_key, dependency_quote(Vm))
+            add_provider(ansible_log, "/srv/images/test/ansible.log")
+            
+            class Cust(MachineCustomization):
+                aces_distribution = ansible_task("ansible/playbooks/aces.yml")
+                
