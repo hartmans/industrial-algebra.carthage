@@ -9,7 +9,7 @@ from carthage.image import *
 from carthage.machine import *
 from carthage.debian import *
 from carthage.network import V4Config
-from carthage.ansible import ansible_task
+from carthage.ansible import ansible_playbook_task
 from carthage.vm import Vm, vm_image
 
 class OurMachine(MachineModel, SystemdNetworkModelMixin, template = True):
@@ -183,7 +183,7 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
                         home_hartmans = Path(path)/"home/hartmans"
                         home_hartmans.joinpath("hadron").symlink_to("/hadron")
 
-                aces_distribution = ansible_task("ansible/playbooks/aces.yml")
+                aces_distribution = ansible_playbook_task("ansible/playbooks/aces.yml")
                 
         class test(OurMachine):
             container_args=["--bind=/home/hartmans/hadron:/hadron", "--bind=/dev/kvm", "--bind=/dev/fuse"]
@@ -231,5 +231,5 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
             add_provider(ansible_log, "/srv/images/test/ansible.log")
             
             class Cust(MachineCustomization):
-                aces_distribution = ansible_task("ansible/playbooks/aces.yml")
+                aces_distribution = ansible_playbook_task("ansible/playbooks/aces.yml")
                 
