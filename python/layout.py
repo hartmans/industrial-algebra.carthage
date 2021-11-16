@@ -26,12 +26,11 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
     apt_dependency = MachineDependency('apt.algebra')
     dns_dependency = MachineDependency('dns.algebra')
     
-    @provides(container_image)
     class OurImage(DebianContainerImage):
         ssh_authorization = customization_task(SshAuthorizedKeyCustomizations)
 
     @no_instantiate()
-    class BusterImage(OurImage.target):
+    class BusterImage(OurImage):
 
         def __init__(self, **kwargs):
             super().__init__(name = "debian-buster",
@@ -40,6 +39,7 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
             self.config_layout = self.injector.get_instance(ConfigLayout)
             self.config_layout.debian.distribution = "buster"
 
+    add_provider(container_image, OurImage)
     add_provider(InjectionKey(BusterImage), BusterImage)
     # We don't need an origin
     add_provider(ssh_origin, None)
