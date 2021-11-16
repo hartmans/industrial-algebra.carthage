@@ -233,3 +233,28 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
             class Cust(MachineCustomization):
                 aces_distribution = ansible_playbook_task("ansible/playbooks/aces.yml")
                 
+        class bullseye(OurMachine):
+
+            @provides(vm_image)
+            @inject(ainjector = AsyncInjector, container = OurImage,
+                    )
+            async def vm_image(ainjector, container):
+                return await ainjector(
+                    debian_container_to_vm,  container, "debian-bullseye.raw",
+                    "20G",
+                    classes = "+SERIAL,CLOUD_INIT,OPENROOT")
+            network  = injector_access("ia_network")
+            
+            @property
+            def this_slot(self):
+                import hadron.carthage
+                slot =  hadron.carthage.fake_slot_for_model(self, netid = 1, role = "debian")
+                return slot
+
+            cloud_init = True
+            add_provider(machine_implementation_key, dependency_quote(Vm))
+            add_provider(ansible_log, "/srv/images/test/ansible.log")
+            
+            class Cust(MachineCustomization):
+                aces_distribution = ansible_playbook_task("ansible/playbooks/aces.yml")
+                
