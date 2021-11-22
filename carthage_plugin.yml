@@ -1,2 +1,5 @@
 name: industrial_algebra
-
+config:
+  plugins:
+    - https://github.com/hadron/carthage_base
+    

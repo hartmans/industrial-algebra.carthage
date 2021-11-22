@@ -11,6 +11,10 @@ from carthage.debian import *
 from carthage.network import V4Config
 from carthage.ansible import ansible_playbook_task
 from carthage.vm import Vm, vm_image
+from carthage_base import *
+
+from carthage_base import *
+from carthage_base.aces import AcesIntegration, AcesMachine
 
 class OurMachine(MachineModel, SystemdNetworkModelMixin, template = True):
 
@@ -26,20 +30,12 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
     apt_dependency = MachineDependency('apt.algebra')
     dns_dependency = MachineDependency('dns.algebra')
     
-    class OurImage(DebianContainerImage):
-        ssh_authorization = customization_task(SshAuthorizedKeyCustomizations)
 
     @no_instantiate()
-    class BusterImage(OurImage):
+    class BusterImage(DebianImage):
+        distribution = "buster"
 
-        def __init__(self, **kwargs):
-            super().__init__(name = "debian-buster",
-                             distribution = "buster",
-                             **kwargs)
-            self.config_layout = self.injector.get_instance(ConfigLayout)
-            self.config_layout.debian.distribution = "buster"
-
-    add_provider(container_image, OurImage)
+    add_provider(container_image, DebianImage)
     add_provider(InjectionKey(BusterImage), BusterImage)
     # We don't need an origin
     add_provider(ssh_origin, None)
@@ -53,9 +49,9 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
         class industrial_algebra(OurMachine):
 
             override_dependencies = True
-
+            add_provider(machine_implementation_key,  BareOrLocal)
+            host="industrial-algebra.suchdamage.org"
             name = "industrial-algebra"
-            add_provider(machine_implementation_key, dependency_quote(LocalMachine))
 
             class net_config(NetworkConfigModel):
                 ia_net = injector_access("ia_network")
@@ -82,7 +78,7 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
 
 
     class ia_enclave(Enclave):
-
+        host = "industrial-algebra.suchdamage.org"
 
         @globally_unique_key("ia_network")
         class ia_net(NetworkModel):
@@ -94,10 +90,12 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
                 dhcp_ranges=[
                     ("10.37.0.10", "10.37.0.250"),
         ],
-                dhcp = True)
+                dhcp = True,
+                domains="algebra",
+                )
 
         domain = "algebra"
-        add_provider(machine_implementation_key, dependency_quote(Container))
+        add_provider(machine_implementation_key, HostedContainer)
 
 
         class net_config(NetworkConfigModel):
@@ -121,20 +119,14 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
 
                 install_mako = install_mako_task('model')
 
-        class dns(OurMachine):
+        class dns(OurMachine, DhcpRole):
 
+            ip_address ="10.37.0.2"
+            
+            mirror_tracking  = DebianMirrorTracker
             override_dependencies = True
 
-            dnsmasq_conf_task = mako_task("dnsmasq.mako", output = "etc/dnsmasq.conf",
-                                          net = InjectionKey("ia_network"))
 
-            class Cust(ContainerCustomization):
-
-                description = "Customization for dns.algebra"
-
-                install_packages = install_stage1_packages_task(['dnsmasq'])
-
-                install_mako = install_mako_task('model')
 
             class network_config(NetworkConfigModel):
                 ia_net = injector_access("ia_network")
@@ -145,7 +137,7 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
                     v4_config = V4Config(
                         address = "10.37.0.2",
                         gateway = "10.37.0.1",
-                        dns_servers = ["127.0.0.1"],
+                        dns_servers = ["192.168.101.1","8.8.8.8"],
                         dhcp = False),
                     )
 
@@ -236,7 +228,7 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
         class bullseye(OurMachine):
 
             @provides(vm_image)
-            @inject(ainjector = AsyncInjector, container = OurImage,
+            @inject(ainjector = AsyncInjector, container = DebianImage,
                     )
             async def vm_image(ainjector, container):
                 return await ainjector(
