@@ -1,3 +1,5 @@
+base_dir: /srv/images/prod
+checkout_dir: /srv/images/prod/checkout
 plugins:
   - /home/hartmans/hadron/hadron-operations
   - /home/hartmans/industrial-algebra.carthage
