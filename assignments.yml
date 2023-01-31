@@ -1,0 +1,14 @@
+ia_net/v4_pool/hints:
+  apt.algebra|eth0: 10.37.0.12
+  bookworm.algebra|eth0: 10.37.0.21
+  dns.algebra|eth0: 10.37.0.2
+  hadron.algebra|eth0: 10.37.0.8
+  industrial-algebra.suchdamage.org|blaptop: 10.37.0.1
+  test.algebra|eth0: 10.37.0.9
+mac:
+  apt.algebra|eth0: d0:cb:f8:0c:cb:c3
+  bookworm.algebra|eth0: 24:50:8e:83:b4:74
+  dns.algebra|eth0: ec:8a:38:32:a2:55
+  hadron.algebra|eth0: 78:dd:d5:d9:db:c4
+  industrial-algebra.suchdamage.org|blaptop: bc:57:20:a1:04:2c
+  test.algebra|eth0: 8c:16:1a:27:e1:16
