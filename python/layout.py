@@ -233,7 +233,7 @@ class IaLayout(CarthageLayout,  AnsibleModelMixin):
             config.debian.mirror = "https://deb.debian.org/debian"
             
 
-        class carthage(OurMachine, AcesMachine, CarthageServerRole):
+        class carthage(OurMachine, CarthageServerRole, AcesMachine):
             ip_address = "carthage.watertown.aces-aoe.net"
             add_provider(machine_implementation_key, dependency_quote(BareMetalMachine))
             network = injector_access("ia_network") # This is a lie but might work
