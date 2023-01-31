@@ -2,11 +2,12 @@ base_dir: /srv/images/prod
 checkout_dir: /srv/images/prod/checkout
 plugins:
   - /home/hartmans/hadron/hadron-operations
-  - /home/hartmans/industrial-algebra.carthage
+  - .
 authorized_keys: /home/hartmans/.ssh/id_hadron_rsa.pub
 hadron_operations: /home/hartmans/hadron/hadron-operations
 container_prefix: ""
 layout_name: industrial-algebra
 debian:
   stage1_mirror: file:///debian
-  mirror: http://apt.algebra/debian
+#  mirror: http://apt.algebra/debian
+  distribution: bookworm
