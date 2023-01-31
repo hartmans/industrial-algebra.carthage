@@ -15,6 +15,8 @@ from carthage_base import *
 
 from carthage_base import *
 from carthage_base.aces import AcesIntegration, AcesMachine
+root_path = Path(__file__).parent.parent
+assignments_path = root_path/"assignments.yml"
 
 class OurMachine(MachineModel, SystemdNetworkModelMixin, template = True):
 
@@ -23,10 +25,12 @@ class OurMachine(MachineModel, SystemdNetworkModelMixin, template = True):
         return self.name #manage through the host name
 
 
-class IaLayout(CarthageLayout, AnsibleModelMixin):
+class IaLayout(CarthageLayout,  AnsibleModelMixin):
 
+    aces_integration = AcesIntegration
     layout_name = "industrial-algebra"
 
+    add_provider(persistent_seed_path, assignments_path)
     apt_dependency = MachineDependency('apt.algebra')
     dns_dependency = MachineDependency('dns.algebra')
     
@@ -50,7 +54,7 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
 
             override_dependencies = True
             add_provider(machine_implementation_key,  BareOrLocal)
-            host="industrial-algebra.suchdamage.org"
+            host="industrial-algebra"
             name = "industrial-algebra"
 
             class net_config(NetworkConfigModel):
@@ -78,7 +82,7 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
 
 
     class ia_enclave(Enclave):
-        host = "industrial-algebra.suchdamage.org"
+        host = "industrial-algebra"
 
         @globally_unique_key("ia_network")
         class ia_net(NetworkModel):
@@ -88,9 +92,10 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
             v4_config = V4Config(
                 network = "10.37.0.0/24",
                 dhcp_ranges=[
-                    ("10.37.0.10", "10.37.0.250"),
+                    ("10.37.0.30", "10.37.0.250"),
         ],
                 dhcp = True,
+                pool = ('10.37.0.5', '10.37.0.25'),
                 domains="algebra",
                 )
 
@@ -142,19 +147,11 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
                     )
 
 
-        class hadron(OurMachine):
+        class hadron(OurMachine, AcesMachine):
 
             container_args=["--bind=/home/hartmans/hadron:/hadron"]
 
             network = injector_access('ia_network')
-            @property
-            def this_slot(self):
-                import hadron.carthage
-                slot =  hadron.carthage.fake_slot_for_model(self, netid = 1, role = "debian")
-                slot.os = "Debian"
-                slot.release = "bullseye"
-                slot.track = "snapshot"
-                return slot
             
             class Cust(MachineCustomization):
 
@@ -200,32 +197,7 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
                         home_hartmans.joinpath("hadron").symlink_to("/hadron")
 
 
-        class buster(OurMachine):
-
-            @provides(vm_image)
-            @inject(ainjector = AsyncInjector, buster_container = BusterImage,
-                    )
-            async def vm_image(ainjector, buster_container):
-                return await ainjector(
-                    debian_container_to_vm,  buster_container, "debian-buster.raw",
-                    "10G",
-                    classes = "+SERIAL,CLOUD_INIT,OPENROOT")
-            network  = injector_access("ia_network")
-            
-            @property
-            def this_slot(self):
-                import hadron.carthage
-                slot =  hadron.carthage.fake_slot_for_model(self, netid = 1, role = "debian")
-                return slot
-
-            cloud_init = True
-            add_provider(machine_implementation_key, dependency_quote(Vm))
-            add_provider(ansible_log, "/srv/images/test/ansible.log")
-            
-            class Cust(MachineCustomization):
-                aces_distribution = ansible_playbook_task("ansible/playbooks/aces.yml")
-                
-        class bullseye(OurMachine):
+        class bookworm(OurMachine):
 
             @provides(vm_image)
             @inject(ainjector = AsyncInjector, container = DebianImage,
@@ -247,6 +219,21 @@ class IaLayout(CarthageLayout, AnsibleModelMixin):
             add_provider(machine_implementation_key, dependency_quote(Vm))
             add_provider(ansible_log, "/srv/images/test/ansible.log")
             
-            class Cust(MachineCustomization):
-                aces_distribution = ansible_playbook_task("ansible/playbooks/aces.yml")
+#            class Cust(MachineCustomization):
+#                aces_distribution = ansible_playbook_task("ansible/playbooks/aces.yml")
                 
+    class DenverEnclave(Enclave):
+
+        domain = "watertown.aces-aoe.net"
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.injector.add_provider(ConfigLayout)
+            config = self.injector.get_instance(ConfigLayout)
+            config.debian.mirror = "https://deb.debian.org/debian"
+            
+
+        class carthage(OurMachine, AcesMachine, CarthageServerRole):
+            ip_address = "carthage.watertown.aces-aoe.net"
+            add_provider(machine_implementation_key, dependency_quote(BareMetalMachine))
+            network = injector_access("ia_network") # This is a lie but might work
